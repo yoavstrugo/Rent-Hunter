@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from langchain_core.callbacks.manager import dispatch_custom_event
-from langchain_openai import ChatOpenAI
+from llm import get_fast_llm
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel
 from typing_extensions import TypedDict
@@ -50,7 +50,7 @@ class RentRadarMultiAgent:
     def __init__(self):
         self.discovery_agent = DiscoveryAgent()
         self.price_analysis_agent = PriceAnalysisAgent()
-        self.coordinator_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        self.coordinator_llm = get_fast_llm()
 
     async def discovery_coordinator_node(self, state: RentRadarState):
         """Coordinate the discovery process"""

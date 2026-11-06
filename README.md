@@ -35,7 +35,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 3. **Install dependencies**
 ```bash
-pip install langgraph streamlit langchain-openai mcp-use
+pip install -r requirements.txt
 ```
 
 4. **Run the demo**
@@ -58,8 +58,8 @@ cp .env.example .env
 
 2. **Edit `.env` with your real credentials**
 ```env
-# OpenAI API (required for LLM processing)
-OPENAI_API_KEY=your_openai_api_key_here
+# Google Gemini API (required for LLM processing - free tier available)
+GOOGLE_AI_STUDIO_API_KEY=your_google_ai_studio_key_here
 
 # Bright Data MCP (for web scraping)
 BRIGHT_DATA_API_TOKEN=your_bright_data_token_here
@@ -67,16 +67,36 @@ BRIGHT_DATA_API_TOKEN=your_bright_data_token_here
 
 ### API Key Setup
 
-1. **OpenAI API Key**
-   - Go to [OpenAI API](https://platform.openai.com/api-keys)
+1. **Google AI Studio (Gemini) API Key**
+   - Go to [Google AI Studio](https://aistudio.google.com/apikey)
    - Create a new API key
-   - Add it to your `.env` file
+   - Add it to your `.env` file as `GOOGLE_AI_STUDIO_API_KEY`
+   - Optional: override the models with `GEMINI_MODEL` (default `gemini-3.5-flash`) and `GEMINI_FAST_MODEL` (default `gemini-3.5-flash-lite`)
+   - Requires Node.js 18+ on your PATH (the Bright Data MCP server runs via `npx`)
 
 2. **Bright Data MCP** (for web scraping)
    - Sign up at [Bright Data](https://brightdata.com)
    - Get your API token from the dashboard
    - Add it to your `.env` file
    - Follow the [Bright Data MCP setup guide](https://github.com/brightdata/brightdata-mcp)
+
+## ☁️ Deploy to Streamlit Community Cloud
+
+1. On [share.streamlit.io](https://share.streamlit.io) click **Create app** → **Deploy a public app from GitHub**
+2. Repository: your fork, Branch: `main`, Main file path: `app.py`
+3. **Advanced settings** → Python version **3.12**, and paste your secrets:
+   ```toml
+   GOOGLE_AI_STUDIO_API_KEY = "..."
+   BRIGHT_DATA_API_TOKEN = "..."
+   APP_PASSWORD = "choose-a-password"   # required to unlock real mode
+   MCP_USE_ANONYMIZED_TELEMETRY = "false"
+   ```
+4. Click **Deploy**
+
+Notes:
+- Node.js (needed by the Bright Data MCP server) is installed from PyPI via `nodejs-wheel`, so no `packages.txt` is needed.
+- Demo mode is open to everyone; real mode (which spends your API quotas) requires `APP_PASSWORD` when it is set.
+- A real run takes 20-30 minutes and only survives while the browser tab stays open.
 
 ## 🏗️ System Architecture
 
@@ -122,8 +142,8 @@ graph TD
        X[Bright Data MCP Tools]
        Y[search_engine]
        Z[scrape_as_markdown]
-       AA[OpenAI GPT-4o]
-       BB[OpenAI GPT-4o-mini]
+       AA[Gemini Flash]
+       BB[Gemini Flash-Lite]
    end
    
    C -.-> Y
@@ -314,7 +334,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 🙏 Acknowledgments
 
 - **Bright Data** for providing the MCP that makes reliable web scraping possible
-- **OpenAI** for GPT models powering the intelligent analysis
+- **Google** for Gemini models powering the intelligent analysis
 - **Streamlit** for the beautiful web interface framework
 - **Tel Aviv rental market** for being our testing ground
 

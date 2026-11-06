@@ -8,7 +8,8 @@ from urllib.parse import urljoin, urlparse
 
 from dotenv import load_dotenv
 from langchain_core.callbacks.manager import dispatch_custom_event
-from langchain_openai import ChatOpenAI
+from llm import get_fast_llm, get_llm
+from mcp_config import bright_data_mcp_config
 from langgraph.graph import END, START, StateGraph
 from mcp_use import MCPAgent, MCPClient
 from pydantic import BaseModel, Field
@@ -82,23 +83,11 @@ class DiscoveryState(TypedDict):
 class DiscoveryAgent:
     def __init__(self):
         # Initialize LLMs
-        self.extraction_llm = ChatOpenAI(model="gpt-4o", temperature=0)
-        self.fast_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        self.extraction_llm = get_llm()
+        self.fast_llm = get_fast_llm()
         
         # Bright Data MCP configuration
-        self.bright_data_config = {
-            "mcpServers": {
-                "Bright Data": {
-                    "command": "npx",
-                    "args": ["@brightdata/mcp"],
-                    "env": {
-                        "API_TOKEN": os.getenv("BRIGHT_DATA_API_TOKEN"),
-                        "WEB_UNLOCKER_ZONE": os.getenv("WEB_UNLOCKER_ZONE", "unblocker"),
-                        "BROWSER_ZONE": os.getenv("BROWSER_ZONE", "scraping_browser")
-                    }
-                }
-            }
-        }
+        self.bright_data_config = bright_data_mcp_config()
 
     def _extract_listing_id_from_url(self, url: str) -> str:
         """Extract listing ID from Yad2 URL"""

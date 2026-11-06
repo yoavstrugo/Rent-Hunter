@@ -5,20 +5,49 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import hmac
 import os
 import time
 from typing import Dict, List
 import base64
 from io import BytesIO
-from integrated_system import run_rent_radar, export_results_to_json, filter_recommendations
-from agent import RentalListing
-from price_analysis_agent import PriceAnalysisAgent
+from dotenv import load_dotenv
 
-# Import your agents (adjust paths as needed)
-# from integrated_system import run_rent_radar, export_results_to_json, filter_recommendations
+load_dotenv()
+
+
+def _export_secrets_to_env():
+    """On Streamlit Community Cloud, keys live in st.secrets; expose top-level
+    values as env vars so the agents (which use os.getenv) can see them."""
+    try:
+        for key, value in st.secrets.items():
+            if isinstance(value, (str, int, float, bool)):
+                os.environ.setdefault(key, str(value))
+    except Exception:
+        pass  # no secrets.toml (local run) - values come from .env instead
+
+
+_export_secrets_to_env()
+
+
+def real_mode_unlocked() -> bool:
+    """Gate real (paid-quota) mode behind APP_PASSWORD when one is configured."""
+    password = os.getenv("APP_PASSWORD")
+    if not password or st.session_state.get("real_mode_unlocked"):
+        return True
+    entered = st.sidebar.text_input("🔒 Password to enable real mode", type="password")
+    if entered and hmac.compare_digest(entered.encode(), password.encode()):
+        st.session_state.real_mode_unlocked = True
+        st.rerun()
+    if entered:
+        st.sidebar.error("Wrong password")
+    return False
+
+# Agent modules (LLM / MCP dependencies) are imported lazily in run_real_analysis()
+# so that Demo Mode works without API keys or the full agent dependency stack.
 def check_dependencies():
     """Check if required environment variables are set"""
-    required_vars = ["OPENAI_API_KEY"]
+    required_vars = ["GOOGLE_AI_STUDIO_API_KEY", "BRIGHT_DATA_API_TOKEN"]
     missing_vars = []
     
     for var in required_vars:
@@ -206,6 +235,8 @@ async def run_real_analysis(search_query: str):
     st.session_state.agent_status['discovery']['progress'] = 10
     
     try:
+        from integrated_system import run_rent_radar
+
         # Run the actual rent radar system
         result = await run_rent_radar(search_query)
         
@@ -531,8 +562,10 @@ def main():
     if not dependencies_ok:
         demo_mode = st.sidebar.checkbox("Demo Mode (Use Sample Data)", value=True, disabled=True)
         st.sidebar.error("Real mode disabled - missing API keys")
+    elif not real_mode_unlocked():
+        demo_mode = st.sidebar.checkbox("Demo Mode (Use Sample Data)", value=True, disabled=True)
     else:
-        demo_mode = st.sidebar.checkbox("Demo Mode (Use Sample Data)", value=False)
+        demo_mode = st.sidebar.checkbox("Demo Mode (Use Sample Data)", value=True)
     # Search configuration
     st.sidebar.header("Search Configuration")
     search_query = st.sidebar.text_input(
@@ -547,9 +580,6 @@ def main():
     st.sidebar.header("Filters")
     max_price = st.sidebar.slider("Max Price (₪)", 0, 20000, 15000)
     min_rooms = st.sidebar.selectbox("Min Rooms", [1.0, 2.0, 3.0, 4.0, 5.0], index=2)
-    
-    # Demo mode toggle
-    demo_mode = st.sidebar.checkbox("Demo Mode (Use Sample Data)", value=True)
     
     # Main content area
     col1, col2 = st.columns([2, 1])
